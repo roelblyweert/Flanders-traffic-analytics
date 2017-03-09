@@ -22,7 +22,7 @@ def processData(xmldata):
 	
 	# parse the data via a loop
 	for meetpunt_entry in root:
-		if meetpunt_entry.tag == "meetpunt": # only process in case 
+		if meetpunt_entry.tag == "meetpunt": # only process in case of a meetpunt tag
 			# create dictionary containing some identifiers
 			dict_data = meetpunt_entry.attrib
 
