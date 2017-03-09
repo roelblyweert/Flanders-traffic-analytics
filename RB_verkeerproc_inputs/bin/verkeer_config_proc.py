@@ -42,7 +42,7 @@ def processConfigData(xmldata):
 	return resulting_data
 
 # function that clears the configuration KV store collection and pushes the new configuration data
-def pushToKvStore(data):
+def pushToKvStore(data, splunkhost, splunkuser, splunkpw, splunkapp, splunkcollection):
 	print "pushing to KV store.."
 	
 	
@@ -54,7 +54,18 @@ def pushToKvStore(data):
 _DEBUG = 1
 FILENAME = os.path.splitext(os.path.basename(__file__))[0]
 
+# Read the configuration file
+config = ConfigParser.SafeConfigParser()
+file_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'default')
+conf = os.path.join(file_dir, "verkeerdata.conf")
+config.read(conf)
+splunkhost = config.get('splunk', 'host')
+splunkuser = config.get('splunk', 'user')
+splunkpw = config.get('splunk', 'password')
+splunkapp = config.get('splunk', 'app')
+splunkcollection = config.get('splunk', 'collection')
+
 # retrieve data
 xmldata = urllib2.urlopen("http://miv.opendata.belfla.be/miv/configuratie/xml").read()
 config_data = processConfigData(xmldata) # process dataset
-pushToKvStore(config_data)
+pushToKvStore(config_data, splunkhost, splunkuser, splunkpw, splunkapp, splunkcollection) # write result to KV store
