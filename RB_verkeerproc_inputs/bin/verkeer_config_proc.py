@@ -40,6 +40,11 @@ def processConfigData(xmldata):
 
 	# return list containing the configuration data
 	return resulting_data
+
+# function that clears the configuration KV store collection and pushes the new configuration data
+def pushToKvStore(data):
+	print "pushing to KV store.."
+	
 	
 ##################
 # MAIN ###########
@@ -52,4 +57,4 @@ FILENAME = os.path.splitext(os.path.basename(__file__))[0]
 # retrieve data
 xmldata = urllib2.urlopen("http://miv.opendata.belfla.be/miv/configuratie/xml").read()
 config_data = processConfigData(xmldata) # process dataset
-print config_data
+pushToKvStore(config_data)
