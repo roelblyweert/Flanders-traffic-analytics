@@ -1,4 +1,4 @@
-# $Id: verkeer_data_proc.py 2016-03-09 $
+# $Id: verkeer_data_proc.py 2016-04-08 $
 # Author: Roel Blyweert <blyweert.roel@gmail.com>
 # Copyright: Roel Blyweert
 
@@ -7,7 +7,6 @@ This script that gets traffic data from all regions in Flanders
 """
 
 import sys, datetime, json, os , os.path as op, time, urllib2
-import ConfigParser
 import json
 import urllib2
 
