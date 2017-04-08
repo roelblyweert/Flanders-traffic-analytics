@@ -60,49 +60,12 @@ def processConfigData(xmldata):
 
 	# return list containing the configuration data
 	return resulting_data
-
-# function that clears the configuration KV store collection and pushes the new configuration data
-def pushToKvStore(data, splunkapp, splunkcollection, session_key):
-	print "pushing to KV store.."
-
-# login into Splunk
-def loginSplunk(host, username, password):
-	print "Login into Splunk.."
-	
-	# login into Splunk and get a session key
-	base_url = "https://" + host + ":8089"
-	request = urllib2.Request(base_url + '/servicesNS/%s/search/auth/login' % (username), 
-	data = urllib.urlencode({'username': username, 'password': password}))
-	server_content = urllib2.urlopen(request)
-	session_key = minidom.parseString(server_content.read()).getElementsByTagName('sessionKey')[0].childNodes[0].nodeValue
-	common_logging.log_debug("sessionKey=" + session_key)
-	
-	# return the session key so it can be used later on
-	return session_key
 	
 ##################
 # MAIN ###########
 ##################
-	
-#OUTPUT OPTIONS
-_DEBUG = 1
-FILENAME = os.path.splitext(os.path.basename(__file__))[0]
-
-# Read the configuration file
-config = ConfigParser.SafeConfigParser()
-file_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'default')
-conf = os.path.join(file_dir, "verkeerdata.conf")
-config.read(conf)
-splunkhost = config.get('splunk', 'host')
-splunkuser = config.get('splunk', 'user')
-splunkpw = config.get('splunk', 'password')
-splunkapp = config.get('splunk', 'app')
-splunkcollection = config.get('splunk', 'collection')
 
 # retrieve data
 xmldata = urllib2.urlopen("http://miv.opendata.belfla.be/miv/configuratie/xml").read()
 config_data = processConfigData(xmldata) # process dataset
 print config_data
-
-#session_key = loginSplunk(splunkhost, splunkuser, splunkpw)
-#pushToKvStore(config_data, splunkapp, splunkcollection, session_key) # write result to KV store
