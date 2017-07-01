@@ -12,9 +12,12 @@ import json
 import urllib2
 import urllib
 import re
+from splunkapi.splunkclient import Splunkclient
+from splunkapi.kv_client import KVClient
 
 # Import ElementTree package for walking over XML trees
 import elementtree.ElementTree as etree
+
 
 ##################
 # SUBROUTINES PART ###########
@@ -62,12 +65,15 @@ def processConfigData(xmldata):
 
 # function that writes the results to a KV store collection
 def writeDataToKVStore(config_data):
-	# some temporary settings for testing
-	splunkhost = "10.211.55.42"
-	splunkuser = "admin"
-	splunkpw = "HRP28yuT"
+	# initialize Splunk KV store communication object
+	kvclient = KVClient("veUS5ntlSNdRGY_6g9lMsZxMvX8gNrE_KteK2YLGxTPynG5E_WuxWbLJtLDda3jbO5RXclqN0yiq3LRT0gnYRLrxB8iU9meZ")
 	
+	# perform a cleanup of the KV store collection
+	kvclient.delete_documents("traffic_flander_config", "nobody", "")
 	
+	# loop through the results of coming from the open data platform and write them to the KV store
+	for document in config_data:
+		kvclient.create_document("traffic_flander_config", "nobody", document)
 	
 ##################
 # MAIN ###########
@@ -76,4 +82,4 @@ def writeDataToKVStore(config_data):
 # retrieve data
 xmldata = urllib2.urlopen("http://miv.opendata.belfla.be/miv/configuratie/xml").read()
 config_data = processConfigData(xmldata) # process dataset
-
+writeDataToKVStore(config_data)

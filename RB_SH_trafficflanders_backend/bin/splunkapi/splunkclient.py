@@ -4,6 +4,7 @@
 
 import logging
 import requests
+import json
 
 class Splunkclient(object):
 	def __init__(self, session_key, base_url='https://localhost:8089/', app_folder='BICS_App_pam' ):
@@ -35,12 +36,11 @@ class Splunkclient(object):
 		:type r: requests.Response :param r: :return: the response as given, or
 		throws errors on, 4xx / 5xx """
 		if r.status_code == 404:
-			logger.error("Error from SplunkAPI %s with content: %s",
+			print("Error from SplunkAPI %s with content: %s",
 					   r.status_code, r.text)
-			raise NotFoundError("Not Found", { 'url': r.url })	
 		elif r.status_code >= 500:
-			logger.error("Error from SplunkAPI %s with content: %s",
+			print("Error from SplunkAPI %s with content: %s",
 					   r.status_code, r.text)
 		elif r.status_code >= 400:
-			logger.error("Client Exception: " + json.dumps(r.json()) + "- HTTP status code: " + r.status_code)
+			print("Client Exception: " + json.dumps(r.json()) + "- HTTP status code: " + str(r.status_code))
 		return r
