@@ -1,4 +1,4 @@
-# $Id: verkeer_config_proc.py 2016-04-08 $
+# $Id: verkeer_config_proc.py 2016-07-01 $
 # Author: Roel Blyweert <blyweert.roel@gmail.com>
 # Copyright: Roel Blyweert
 
@@ -29,10 +29,9 @@ def processConfigData(xmldata):
 	
 	# parse the data via a loop
 	for meetpunt_entry in root:
-		if meetpunt_entry.tag == "meetpunt": # only process in case 
+		if meetpunt_entry.tag == "meetpunt": # only process in case of a meetpunt XML tag
 			# create dictionary containing some identifiers
 			entry_data = meetpunt_entry.attrib
-			print entry_data
 
 			# go through all data in the entry
 			for data in meetpunt_entry:
@@ -68,4 +67,4 @@ def processConfigData(xmldata):
 # retrieve data
 xmldata = urllib2.urlopen("http://miv.opendata.belfla.be/miv/configuratie/xml").read()
 config_data = processConfigData(xmldata) # process dataset
-print config_data
+
