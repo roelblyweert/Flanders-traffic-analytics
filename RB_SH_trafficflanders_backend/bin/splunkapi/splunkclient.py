@@ -1,3 +1,7 @@
+# $Id: splunkclient.py 2016-07-01 $
+# Author: Roel Blyweert <blyweert.roel@gmail.com>
+# Copyright: Roel Blyweert
+
 import logging
 import requests
 

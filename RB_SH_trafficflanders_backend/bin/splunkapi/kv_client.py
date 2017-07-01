@@ -1,3 +1,7 @@
+# $Id: kv_client.py 2016-07-01 $
+# Author: Roel Blyweert <blyweert.roel@gmail.com>
+# Copyright: Roel Blyweert
+
 import json
 import requests
 from splunkapi.splunkclient import Splunkclient
