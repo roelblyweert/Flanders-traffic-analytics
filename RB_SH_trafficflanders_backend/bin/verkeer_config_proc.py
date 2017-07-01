@@ -59,6 +59,15 @@ def processConfigData(xmldata):
 
 	# return list containing the configuration data
 	return resulting_data
+
+# function that writes the results to a KV store collection
+def writeDataToKVStore(config_data):
+	# some temporary settings for testing
+	splunkhost = "10.211.55.42"
+	splunkuser = "admin"
+	splunkpw = "HRP28yuT"
+	
+	
 	
 ##################
 # MAIN ###########
