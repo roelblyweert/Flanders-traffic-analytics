@@ -68,12 +68,30 @@ class TrafficInvToKVStore(Script):
 		fetch_url = validation_definition.parameters["fetch_url"]
 		dest_collection = validation_definition.parameters["dest_collection"]
 		
+		self.logger.info("fetch_url" + fetch_url)
+		self.logger.info("dest_collection" + dest_collection)
+		
 	def stream_events(self, inputs, ew):
 		# Splunk Enterprise calls the modular input, streams XML describing the inputs to stdin,
 		# and waits for XML on stdout describing events. The stdout is the data that gets indexes in Splunk.
 		# The stin also includes a session_key that can be used to communicate with the Splunk REST API.
-		self.logger.debug("stream_events: " + time.strftime("%d-%m-%Y %H:%M:%S"))
 		
+		# some debugging logs
+		self.logger.debug("stream_events: " + time.strftime("%d-%m-%Y %H:%M:%S"))
+		self.logger.debug("metadata: " + str(inputs.metadata))
+		self.logger.debug("session_key: " + inputs.metadata['session_key'])
+		session_key = inputs.metadata['session_key'] # read the session key
+		
+		# loop through the actual modular inputs settings
+		for input_name, input_item in inputs.inputs.iteritems():
+			# read the URL and the destination KV store collection
+			fetch_url = input_item['fetch_url']
+			dest_collection = input_item['dest_collection']
+			
+			# some debugging output
+			self.logger.debug("fetch_url " + fetch_url)
+			self.logger.debug("dest_collection " + dest_collection)
+						  
 	# logging setup subroutine
 	def setup_logging(self):
 		"""
