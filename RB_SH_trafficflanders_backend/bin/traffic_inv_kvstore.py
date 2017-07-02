@@ -2,13 +2,15 @@
 # Author: Roel Blyweert <blyweert.roel@gmail.com>
 # Copyright: Roel Blyweert
 
-import sys, datetime, json, os , os.path as op, time, urllib2
+import sys, datetime, json, time, urllib2
 import ConfigParser
 import json
 import urllib2
 import urllib
 import re
+import os, os.path as op
 import logging
+import logging.handlers
 
 # Import of add-on specific modules
 from splunkapi.splunkclient import Splunkclient
@@ -19,43 +21,20 @@ import elementtree.ElementTree as etree
 
 # import the Splunk modular inputs related modules
 from splunklib.modularinput import *
-
-###############################
-####### Logger functions ######
-###############################
-
-# logging setup subroutine
-def setup_logging():
-	"""
-	Setup logging
-	Log is written to /opt/splunk/var/log/splunk/traffic_inv_kvstore.log
-	"""
-	FILENAME = os.path.splitext(os.path.basename(__file__))[0]
-	logger = logging.getLogger('splunk.' + FILENAME)
-	logger.setLevel(logging.INFO)
-	SPLUNK_HOME = os.environ['SPLUNK_HOME']
-	
-	LOGGING_DEFAULT_CONFIG_FILE = os.path.join(SPLUNK_HOME, 'etc', 'log.cfg')
-	LOGGING_LOCAL_CONFIG_FILE = os.path.join(SPLUNK_HOME, 'etc', 'log-local.cfg')
-	LOGGING_STANZA_NAME = 'python'
-	LOGGING_FILE_NAME = FILENAME + ".log"
-	BASE_LOG_PATH = os.path.join('var', 'log', 'splunk')
-	LOGGING_FORMAT = "%(asctime)s %(levelname)-s\t%(module)s:%(lineno)d - %(message)s"
-	
-	splunk_log_handler = logging.handlers.RotatingFileHandler(
-		os.path.join(_SPLUNK_HOME, BASE_LOG_PATH, LOGGING_FILE_NAME), mode='a')
-	splunk_log_handler.setFormatter(logging.Formatter(LOGGING_FORMAT))
-	logger.addHandler(splunk_log_handler)
-	splunk.setupSplunkLogger(logger, LOGGING_DEFAULT_CONFIG_FILE,
-						LOGGING_LOCAL_CONFIG_FILE, LOGGING_STANZA_NAME)
-	
-	return logger
+import splunk
 
 class TrafficInvToKVStore(Script):
 	"""
 	Main class for the modular input inheriting from the Script class.
 	The Script class is an abstract class shipped with the Splun SDK and used for modular inputs specifically.
 	"""
+	
+	# constructor of TrafficInvToKVStore
+	def __init__(self):
+		# call the constructor of its parent class
+		super(TrafficInvToKVStore, self).__init__()
+		# initialize the logging system
+		self.logger = self.setup_logging()
 	
 	# subroutine to get the scheme from the modular input
 	def get_scheme(self):
@@ -83,8 +62,7 @@ class TrafficInvToKVStore(Script):
 	
 	# subroutine to validate the inputs of the modular input
 	def validate_input(self, validation_definition):
-		logger = setup_logging()
-		logger.info("validate_inputs: " + time.strftime("%d-%m-%Y %H:%M:%S"))
+		self.logger.info("validate_inputs: " + time.strftime("%d-%m-%Y %H:%M:%S"))
 		
 		# get the parameters
 		fetch_url = validation_definition.parameters["fetch_url"]
@@ -94,8 +72,36 @@ class TrafficInvToKVStore(Script):
 		# Splunk Enterprise calls the modular input, streams XML describing the inputs to stdin,
 		# and waits for XML on stdout describing events. The stdout is the data that gets indexes in Splunk.
 		# The stin also includes a session_key that can be used to communicate with the Splunk REST API.
-		logger = setup_logging()
-		logger.debug("stream_events: " + time.strftime("%d-%m-%Y %H:%M:%S"))
+		self.logger.debug("stream_events: " + time.strftime("%d-%m-%Y %H:%M:%S"))
+		
+	# logging setup subroutine
+	def setup_logging(self):
+		"""
+		Setup logging
+		Log is written to /opt/splunk/var/log/splunk/traffic_inv_kvstore.log
+		"""
+		FILENAME = os.path.splitext(os.path.basename(__file__))[0]
+		logger = logging.getLogger('splunk.' + FILENAME)
+		logger.setLevel(logging.INFO)
+		SPLUNK_HOME = os.environ['SPLUNK_HOME']
+		
+		LOGGING_DEFAULT_CONFIG_FILE = os.path.join(SPLUNK_HOME, 'etc', 'log.cfg')
+		LOGGING_LOCAL_CONFIG_FILE = os.path.join(SPLUNK_HOME, 'etc', 'log-local.cfg')
+		LOGGING_STANZA_NAME = 'python'
+		LOGGING_FILE_NAME = FILENAME + ".log"
+		BASE_LOG_PATH = os.path.join('var', 'log', 'splunk')
+		LOGGING_FORMAT = "%(asctime)s %(levelname)-s\t%(module)s:%(lineno)d - %(message)s"
+		
+		print os.path.join(SPLUNK_HOME, BASE_LOG_PATH, LOGGING_FILE_NAME)
+		splunk_log_handler = logging.handlers.RotatingFileHandler(os.path.join(SPLUNK_HOME, BASE_LOG_PATH, LOGGING_FILE_NAME), mode='a') 
+		splunk_log_handler.setFormatter(logging.Formatter(LOGGING_FORMAT))
+		logger.addHandler(splunk_log_handler)
+		splunk.setupSplunkLogger(logger, LOGGING_DEFAULT_CONFIG_FILE, LOGGING_LOCAL_CONFIG_FILE, LOGGING_STANZA_NAME)
+		
+		# some logging in case of successful initialization.
+		logger.info("Script started and logging initialized correctly.")
+		
+		return logger
 
 # main entry point of the modular input
 if __name__ == "__main__":
