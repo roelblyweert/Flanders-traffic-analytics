@@ -68,8 +68,9 @@ class TrafficInvToKVStore(Script):
 		fetch_url = validation_definition.parameters["fetch_url"]
 		dest_collection = validation_definition.parameters["dest_collection"]
 		
-		self.logger.info("fetch_url" + fetch_url)
-		self.logger.info("dest_collection" + dest_collection)
+		# some debugging statements
+		self.logger.debug("fetch_url" + fetch_url)
+		self.logger.debug("dest_collection" + dest_collection)
 		
 	def stream_events(self, inputs, ew):
 		# Splunk Enterprise calls the modular input, streams XML describing the inputs to stdin,
@@ -91,6 +92,68 @@ class TrafficInvToKVStore(Script):
 			# some debugging output
 			self.logger.debug("fetch_url " + fetch_url)
 			self.logger.debug("dest_collection " + dest_collection)
+			
+			# fetch, process and push the data to the KV store
+			xmldata = self.fetchData(fetch_url) # fetch 
+			processed_xml = self.processConfigData(xmldata) # process
+			self.writeDataToKVStore(processed_xml, session_key, dest_collection)
+			
+	# function to fetch the XML sensor inventory data
+	def fetchData(self, url):
+		xmldata = urllib2.urlopen(url).read()
+		return xmldata
+			
+	# function that processes the XML configuration data and store this in a dictionary
+	def processConfigData(self, xmldata):
+		# initialize resulting variable
+		resulting_data = []
+		# read the XML content
+		root = etree.fromstring(xmldata)
+		
+		# parse the data via a loop
+		for meetpunt_entry in root:
+			if meetpunt_entry.tag == "meetpunt": # only process in case of a meetpunt XML tag
+				# create dictionary containing some identifiers
+				entry_data = meetpunt_entry.attrib
+	
+				# go through all data in the entry
+				for data in meetpunt_entry:
+					##########################################################################
+					## following lines are needed due to data quality and data encoding issues
+					# read the text and cast to a string object
+					txt = str(data.text)
+					# replace commas by periods in the context of proper numerical handling
+					txt = txt.encode('utf-8')
+					txt = re.sub("\xe2\x80\x93", "-", txt) # remove en dash
+					txt = txt.encode('ascii')
+					txt = txt.replace(",", ".")
+					##########################################################################
+					
+					# check the format of the data
+					if (txt.isdigit() or txt.replace('.','',1).isdigit()):
+						#print txt + " - float"
+						entry_data[data.tag] = float(txt)
+					else: 
+						#print txt + " - string"
+						entry_data[data.tag] = txt
+	
+				# append to the resulting list
+				resulting_data.append(entry_data)
+	
+		# return list containing the configuration data
+		return resulting_data		
+			
+	# function that writes the results to a KV store collection
+	def writeDataToKVStore(self, config_data, session_key, kvstore_collection):
+		# initialize Splunk KV store communication object
+		kvclient = KVClient(session_key)
+		
+		# perform a cleanup of the KV store collection
+		kvclient.delete_documents(kvstore_collection, "nobody", "")
+		
+		# loop through the results of coming from the open data platform and write them to the KV store
+		for document in config_data:
+			kvclient.create_document(kvstore_collection, "nobody", document)
 						  
 	# logging setup subroutine
 	def setup_logging(self):
