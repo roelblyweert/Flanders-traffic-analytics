@@ -96,39 +96,39 @@ class TrafficInvToKVStore(Script):
 			# fetch, process and push the data to the KV store
 			xmldata = self.fetchData(fetch_url) # fetch 
 			processed_xml = self.processConfigData(xmldata) # process
-			self.writeDataToKVStore(processed_xml, session_key, dest_collection)
-			
+			self.writeDataToKVStore(processed_xml, session_key, dest_collection) # push to KV store
+
 	# function to fetch the XML sensor inventory data
 	def fetchData(self, url):
-		xmldata = urllib2.urlopen(url).read()
-		return xmldata
-			
+	 	xmldata = urllib2.urlopen(url).read()
+	 	return xmldata
+	 		
 	# function that processes the XML configuration data and store this in a dictionary
 	def processConfigData(self, xmldata):
-		# initialize resulting variable
-		resulting_data = []
-		# read the XML content
-		root = etree.fromstring(xmldata)
-		
-		# parse the data via a loop
-		for meetpunt_entry in root:
-			if meetpunt_entry.tag == "meetpunt": # only process in case of a meetpunt XML tag
-				# create dictionary containing some identifiers
-				entry_data = meetpunt_entry.attrib
-	
-				# go through all data in the entry
-				for data in meetpunt_entry:
-					##########################################################################
-					## following lines are needed due to data quality and data encoding issues
-					# read the text and cast to a string object
-					txt = str(data.text)
-					# replace commas by periods in the context of proper numerical handling
-					txt = txt.encode('utf-8')
-					txt = re.sub("\xe2\x80\x93", "-", txt) # remove en dash
-					txt = txt.encode('ascii')
-					txt = txt.replace(",", ".")
-					##########################################################################
-					
+	 	# initialize resulting variable
+	 	resulting_data = []
+	 	# read the XML content
+	 	root = etree.fromstring(xmldata)
+	 	
+	 	# parse the data via a loop
+	 	for meetpunt_entry in root:
+	 		if meetpunt_entry.tag == "meetpunt": # only process in case of a meetpunt XML tag
+	 			# create dictionary containing some identifiers
+	 			entry_data = meetpunt_entry.attrib
+	 
+	 			# go through all data in the entry
+	 			for data in meetpunt_entry:
+	 				##########################################################################
+	 				## following lines are needed due to data quality and data encoding issues
+	 				# read the text and cast to a string object
+	 				txt = str(data.text)
+	 				# replace commas by periods in the context of proper numerical handling
+	 				txt = txt.encode('utf-8')
+	 				txt = re.sub("\xe2\x80\x93", "-", txt) # remove en dash
+	 				txt = txt.encode('ascii')
+	 				txt = txt.replace(",", ".")
+	 				##########################################################################
+	 				
 					# check the format of the data
 					if (txt.isdigit() or txt.replace('.','',1).isdigit()):
 						#print txt + " - float"
@@ -173,7 +173,6 @@ class TrafficInvToKVStore(Script):
 		BASE_LOG_PATH = os.path.join('var', 'log', 'splunk')
 		LOGGING_FORMAT = "%(asctime)s %(levelname)-s\t%(module)s:%(lineno)d - %(message)s"
 		
-		print os.path.join(SPLUNK_HOME, BASE_LOG_PATH, LOGGING_FILE_NAME)
 		splunk_log_handler = logging.handlers.RotatingFileHandler(os.path.join(SPLUNK_HOME, BASE_LOG_PATH, LOGGING_FILE_NAME), mode='a') 
 		splunk_log_handler.setFormatter(logging.Formatter(LOGGING_FORMAT))
 		logger.addHandler(splunk_log_handler)
