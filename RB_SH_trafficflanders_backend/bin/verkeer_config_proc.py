@@ -74,7 +74,18 @@ def writeDataToKVStore(config_data):
 	# loop through the results of coming from the open data platform and write them to the KV store
 	for document in config_data:
 		kvclient.create_document("traffic_flander_config", "nobody", document)
+
+# read XML configuration passed from splunkd
+def get_config():
+	config = {}
 	
+	# read everything from stdin
+	config_str = sys.stdin.read()
+	print config_str
+	
+	f = open('temp.txt', 'w')
+	f.write(config_str)
+
 ##################
 # MAIN ###########
 ##################
@@ -83,3 +94,5 @@ def writeDataToKVStore(config_data):
 xmldata = urllib2.urlopen("http://miv.opendata.belfla.be/miv/configuratie/xml").read()
 config_data = processConfigData(xmldata) # process dataset
 writeDataToKVStore(config_data)
+
+
