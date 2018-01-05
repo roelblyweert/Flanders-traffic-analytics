@@ -1,0 +1,108 @@
+<form>
+  <label>Flanders traffic geostats dashboard</label>
+  <fieldset submitButton="false" autoRun="true">
+    <input type="time">
+      <label></label>
+      <default>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <title>non geostats example</title>
+      <viz type="leaflet_maps_app.leaflet_maps">
+        <search>
+          <query>| tstats count where index=traffic_flanders by unieke_id 
+| lookup traffic_flander_config unieke_id AS unieke_id OUTPUT X_coord_EPSG_31370, Y_coord_EPSG_31370, breedtegraad_EPSG_4326, lengtegraad_EPSG_4326, volledige_naam, Kmp_Rsys, Rijstrook 
+| rename breedtegraad_EPSG_4326 AS latitude, lengtegraad_EPSG_4326 AS longitude</query>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="leaflet_maps_app.leaflet_maps.allPopups">1</option>
+        <option name="leaflet_maps_app.leaflet_maps.animate">1</option>
+        <option name="leaflet_maps_app.leaflet_maps.autoFitAndZoom">1</option>
+        <option name="leaflet_maps_app.leaflet_maps.autoFitAndZoomDelay">500</option>
+        <option name="leaflet_maps_app.leaflet_maps.cluster">1</option>
+        <option name="leaflet_maps_app.leaflet_maps.contextMenu">0</option>
+        <option name="leaflet_maps_app.leaflet_maps.criticalThreshold">80</option>
+        <option name="leaflet_maps_app.leaflet_maps.defaultHeight">600</option>
+        <option name="leaflet_maps_app.leaflet_maps.drilldown">1</option>
+        <option name="leaflet_maps_app.leaflet_maps.fullScreen">0</option>
+        <option name="leaflet_maps_app.leaflet_maps.googlePlacesPosition">topleft</option>
+        <option name="leaflet_maps_app.leaflet_maps.googlePlacesSearch">0</option>
+        <option name="leaflet_maps_app.leaflet_maps.googlePlacesZoomLevel">12</option>
+        <option name="leaflet_maps_app.leaflet_maps.layerControl">1</option>
+        <option name="leaflet_maps_app.leaflet_maps.layerControlCollapsed">1</option>
+        <option name="leaflet_maps_app.leaflet_maps.mapCenterLat">39.50</option>
+        <option name="leaflet_maps_app.leaflet_maps.mapCenterLon">-98.35</option>
+        <option name="leaflet_maps_app.leaflet_maps.mapCenterZoom">6</option>
+        <option name="leaflet_maps_app.leaflet_maps.mapTile">http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png</option>
+        <option name="leaflet_maps_app.leaflet_maps.maxClusterRadius">2</option>
+        <option name="leaflet_maps_app.leaflet_maps.maxSpiderfySize">1024</option>
+        <option name="leaflet_maps_app.leaflet_maps.maxZoom">19</option>
+        <option name="leaflet_maps_app.leaflet_maps.measureActiveColor">#00ff00</option>
+        <option name="leaflet_maps_app.leaflet_maps.measureCompletedColor">#0066ff</option>
+        <option name="leaflet_maps_app.leaflet_maps.measureIconPosition">topright</option>
+        <option name="leaflet_maps_app.leaflet_maps.measureLocalization">en</option>
+        <option name="leaflet_maps_app.leaflet_maps.measurePrimaryAreaUnit">acres</option>
+        <option name="leaflet_maps_app.leaflet_maps.measurePrimaryLengthUnit">feet</option>
+        <option name="leaflet_maps_app.leaflet_maps.measureSecondaryAreaUnit">sqmiles</option>
+        <option name="leaflet_maps_app.leaflet_maps.measureSecondaryLengthUnit">miles</option>
+        <option name="leaflet_maps_app.leaflet_maps.measureTool">0</option>
+        <option name="leaflet_maps_app.leaflet_maps.minZoom">1</option>
+        <option name="leaflet_maps_app.leaflet_maps.multiplePopups">0</option>
+        <option name="leaflet_maps_app.leaflet_maps.pathColorList">#0003F0,#D43C29,darkgreen,0xe2d400,darkred,#23A378</option>
+        <option name="leaflet_maps_app.leaflet_maps.permanentTooltip">1</option>
+        <option name="leaflet_maps_app.leaflet_maps.rangeOneBgColor">#B5E28C</option>
+        <option name="leaflet_maps_app.leaflet_maps.rangeOneFgColor">#6ECC39</option>
+        <option name="leaflet_maps_app.leaflet_maps.rangeThreeBgColor">#FD9C73</option>
+        <option name="leaflet_maps_app.leaflet_maps.rangeThreeFgColor">#F18017</option>
+        <option name="leaflet_maps_app.leaflet_maps.rangeTwoBgColor">#F1D357</option>
+        <option name="leaflet_maps_app.leaflet_maps.rangeTwoFgColor">#F0C20C</option>
+        <option name="leaflet_maps_app.leaflet_maps.scrollWheelZoom">0</option>
+        <option name="leaflet_maps_app.leaflet_maps.showPathLines">0</option>
+        <option name="leaflet_maps_app.leaflet_maps.singleMarkerMode">0</option>
+        <option name="leaflet_maps_app.leaflet_maps.spiderfyDistanceMultiplier">1</option>
+        <option name="leaflet_maps_app.leaflet_maps.stickyTooltip">1</option>
+        <option name="leaflet_maps_app.leaflet_maps.warningThreshold">55</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </viz>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Cluster Map</title>
+      <viz type="viz_clustermap.clustermap">
+        <search>
+          <query>| tstats count where index=traffic_flanders by unieke_id 
+| lookup traffic_flander_config unieke_id AS unieke_id OUTPUT X_coord_EPSG_31370, Y_coord_EPSG_31370, breedtegraad_EPSG_4326, lengtegraad_EPSG_4326, volledige_naam, Kmp_Rsys, Rijstrook 
+| geostats globallimit=0 latfield=breedtegraad_EPSG_4326 longfield=lengtegraad_EPSG_4326 sum(count) AS count by volledige_naam</query>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <option name="viz_clustermap.clustermap.lat">51.0359</option>
+        <option name="viz_clustermap.clustermap.lng">4.4775</option>
+        <option name="viz_clustermap.clustermap.markerColor1">#008cff</option>
+        <option name="viz_clustermap.clustermap.markerColor2">#ffbf00</option>
+        <option name="viz_clustermap.clustermap.markerColor3">#ff0000</option>
+        <option name="viz_clustermap.clustermap.markerColor4">#ff00ed</option>
+        <option name="viz_clustermap.clustermap.maxClusters">1024</option>
+        <option name="viz_clustermap.clustermap.numberFormat_min_0">0.[0]</option>
+        <option name="viz_clustermap.clustermap.numberFormat_min_1000">1.1a</option>
+        <option name="viz_clustermap.clustermap.numberFormat_min_10000">1a</option>
+        <option name="viz_clustermap.clustermap.numberFormat_min_1000000">1.1a</option>
+        <option name="viz_clustermap.clustermap.size">19</option>
+        <option name="viz_clustermap.clustermap.tiles">light</option>
+        <option name="viz_clustermap.clustermap.tiles_min_zoom">1</option>
+        <option name="viz_clustermap.clustermap.zoom">9</option>
+      </viz>
+    </panel>
+  </row>
+</form>
