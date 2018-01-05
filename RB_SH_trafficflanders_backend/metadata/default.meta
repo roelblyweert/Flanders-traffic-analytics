@@ -1,5 +1,4 @@
-[collections/traffic_flander_config]
+[]
+access = read : [ * ], write : [ admin ]
 export = system
 
-[transforms/traffic_flander_config]
-export = system
