@@ -1,0 +1,4 @@
+defect_nr,defect_description
+0,no failure
+1,1 of both detection loops is probably failing
+2,more than 20 percent bad counts: severe failure

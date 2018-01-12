@@ -1,0 +1,6 @@
+class_id,class_name,class_description
+1,Small vehicles,This vehicle class was used for vehicles with estimated lenght between 0m and 1,00m.
+2,Cars,Vehicles with an estimated length between 1,00m and 4,90m
+3,Vans,Vehicles with an estimated length between 4,90m and 6,90m
+4,Rigid lorries,Vehicles with an estimated length between 6,90m and 12,00m
+5,Trailers or busses,Vehicles with an estimated length longer than 12,00m
