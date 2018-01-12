@@ -1,0 +1,181 @@
+<form>
+  <label>Traffic vehicle overview per sensor</label>
+  <search id="fetch_traffic_monitoring_data">
+    <query>| tstats latest(defect) AS defect, sum(klasse_1.verkeersintensiteit) AS number_small_vehicles, sum(klasse_2.verkeersintensiteit) AS number_cars, sum(klasse_3.verkeersintensiteit) AS number_vans, sum(klasse_4.verkeersintensiteit) AS number_lorries, sum(klasse_5.verkeersintensiteit) AS number_large_vehicles, latest(klasse_1.voertuigsnelheid_rekenkundig) AS average_speed_small_vehiles, latest(klasse_2.voertuigsnelheid_rekenkundig) AS average_speed_cars, latest(klasse_3.voertuigsnelheid_rekenkundig) AS average_speed_vans, latest(klasse_4.voertuigsnelheid_rekenkundig) AS average_speed_lorries, latest(klasse_5.voertuigsnelheid_rekenkundig) AS average_speed_large_cars, latest(onrustigheid) AS restlessness, latest(beschikbaarheidsgraad) AS sensor_availability where index=traffic_flanders by unieke_id 
+| lookup traffic_flander_config.csv unieke_id AS unieke_id OUTPUT volledige_naam 
+| lookup sensor_defect_status.csv defect_nr AS defect OUTPUT defect_description</query>
+    <sampleRatio>1</sampleRatio>
+  </search>
+  <fieldset submitButton="false" autoRun="true">
+    <input type="time">
+      <label></label>
+      <default>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+    <input type="multiselect" token="class_token">
+      <label>Select vehicle class(es)</label>
+      <choice value="*">All</choice>
+      <default>*</default>
+      <fieldForLabel>class_name</fieldForLabel>
+      <fieldForValue>class_id</fieldForValue>
+      <!-- All the values and their valuePrefix and valueSuffix will be concatenated together with the delimiter between them -->
+      <delimiter>,</delimiter>
+      <search>
+        <query>| inputlookup vehicle_classes.csv 
+| fields - class_description</query>
+      </search>
+    </input>
+    <input type="dropdown" token="sensor_location_token" searchWhenChanged="true">
+      <label>Select a sensor location</label>
+      <fieldForLabel>volledige_naam</fieldForLabel>
+      <fieldForValue>volledige_naam</fieldForValue>
+      <search base="fetch_traffic_monitoring_data">
+        <query>dedup volledige_naam 
+        | sort volledige_naam</query>
+      </search>
+    </input>
+    <input type="dropdown" token="sensor_id_token" searchWhenChanged="true">
+      <label>Select a sensor ID</label>
+      <fieldForLabel>unieke_id</fieldForLabel>
+      <fieldForValue>unieke_id</fieldForValue>
+      <search base="fetch_traffic_monitoring_data">
+        <query>search volledige_naam="$sensor_location_token$"
+        | sort unieke_id</query>
+      </search>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <title>Average speed over time by vehicle class</title>
+      <chart>
+        <search>
+          <query>| tstats latest(klasse_1.voertuigsnelheid_rekenkundig) AS "Average speed of small vehicles", latest(klasse_2.voertuigsnelheid_rekenkundig) AS "Average speed of cars", latest(klasse_3.voertuigsnelheid_rekenkundig) AS "Average speed of vans", latest(klasse_4.voertuigsnelheid_rekenkundig) AS "Average speed of lorries", latest(klasse_5.voertuigsnelheid_rekenkundig) AS "Average speed of large cars" where index=traffic_flanders unieke_id="$sensor_id_token$" by _time span=15m</query>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.text">Time</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.text">km/h</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">collapsed</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">area</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">none</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="trellis.enabled">1</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Number of cars over time by vehicle class</title>
+      <chart>
+        <search>
+          <query>| tstats sum(klasse_1.verkeersintensiteit) AS "Number of small vehicles", sum(klasse_2.verkeersintensiteit) AS "Number of cars", sum(klasse_3.verkeersintensiteit) AS "Number of vans", sum(klasse_4.verkeersintensiteit) AS "Number of lorries", sum(klasse_5.verkeersintensiteit) AS "Number of large vehicles" where index=traffic_flanders unieke_id="$sensor_id_token$" by _time, span=15m</query>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.text">Time</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.text"># vehicles</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">collapsed</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">area</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">none</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="trellis.enabled">1</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Aggregated occupancy over time</title>
+      <chart>
+        <search>
+          <query>| tstats avg(bezettingsgraad) AS occupancy where index="traffic_flanders" unieke_id="$sensor_id_token$" by _time span=5m</query>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.text">Time</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.text">%</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+    </panel>
+  </row>
+</form>

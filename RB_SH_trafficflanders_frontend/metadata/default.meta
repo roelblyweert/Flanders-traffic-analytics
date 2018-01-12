@@ -2,13 +2,24 @@
 # Application-level permissions
 
 []
-access = read : [ * ], write : [ admin ]
-
-[views/dashboard_geo_test]
-access = read : [ * ], write : [ admin ]
-export = none
+access = read : [ * ], write : [ admin, power ]
 
 [savedsearches/Flanders%20traffic%20inventory%20lookup%20population]
 access = read : [ * ], write : [ admin ]
 export = none
+owner = admin
 
+[views/flanders_traffic_sensor_monitoring]
+access = read : [ * ], write : [ admin ]
+export = none
+owner = admin
+
+[views/flanders_traffic_vehicle_speed_overview]
+access = read : [ * ], write : [ admin ]
+export = none
+owner = admin
+
+[views/traffic_sensor_statistics]
+access = read : [ * ], write : [ admin ]
+export = none
+owner = admin
