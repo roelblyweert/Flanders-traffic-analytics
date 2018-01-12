@@ -34,7 +34,7 @@
         <option name="drilldown">none</option>
         <option name="numberPrecision">0</option>
         <option name="rangeColors">["0x65a637","0xf7bc38"]</option>
-        <option name="rangeValues">[1]</option>
+        <option name="rangeValues">[0]</option>
         <option name="showSparkline">1</option>
         <option name="showTrendIndicator">1</option>
         <option name="trellis.enabled">0</option>
@@ -60,7 +60,7 @@
         <option name="drilldown">none</option>
         <option name="numberPrecision">0</option>
         <option name="rangeColors">["0x65a637","0xd93f3c"]</option>
-        <option name="rangeValues">[1]</option>
+        <option name="rangeValues">[0]</option>
         <option name="showSparkline">1</option>
         <option name="showTrendIndicator">1</option>
         <option name="trellis.enabled">0</option>
@@ -282,6 +282,64 @@
         <option name="trellis.scales.shared">1</option>
         <option name="trellis.size">medium</option>
       </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Metric correlation overview</title>
+      <viz type="parallel_coordinates_app.parallel_coordinates">
+        <search>
+          <query>
+            <![CDATA[ | tstats sum(klasse_1.verkeersintensiteit) AS number_1, sum(klasse_2.verkeersintensiteit) AS number_2, sum(klasse_3.verkeersintensiteit) AS number_3, sum(klasse_4.verkeersintensiteit) AS number_4, sum(klasse_5.verkeersintensiteit) AS number_5, latest(klasse_1.voertuigsnelheid_rekenkundig) AS average_1, latest(klasse_2.voertuigsnelheid_rekenkundig) AS average_2, latest(klasse_3.voertuigsnelheid_rekenkundig) AS average_3, latest(klasse_4.voertuigsnelheid_rekenkundig) AS average_4, latest(klasse_5.voertuigsnelheid_rekenkundig) AS average_5 where index=traffic_flanders by unieke_id 
+| fields - unieke_id 
+| stats list(*) AS * 
+| transpose 
+| rex field=column "^(?<data_type>average|number)\_(?<class_id>\d+)$" 
+| lookup vehicle_classes.csv class_id AS class_id OUTPUT class_name 
+| fields - column, class_id 
+| rename "row 1" AS value 
+| mvexpand value 
+| eval speed = if(data_type="average", value, null()) 
+| eval number = if(data_type="number", value, null()) 
+| fields - value, data_type 
+| stats list(*) AS * by class_name 
+| eval temp = mvzip(number, speed ,"##") 
+| fields - number, speed 
+| mvexpand temp 
+| rex field=temp "(?<number>.+)##(?<speed>.+)" 
+| fields - temp, _mkv_child 
+| streamstats count by class_name 
+| search count < 100 
+| fields - count 
+| rename class_name AS "Vehicle class name", number AS "Number of vehicles", speed AS "Vehicle speed" ]]>
+          </query>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </viz>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Data quality overview - count per hour and day - last 30 days</title>
+      <viz type="punchcard_app.punchcard">
+        <search>
+          <query>| tstats count where index=traffic_flanders by _time span=1h 
+| eval date_hour=strftime(_time,"%H") 
+| eval day=strftime(_time,"%Y-%m-%d") 
+| fields - _time | table date_hour, day, count</query>
+          <earliest>-30d@d</earliest>
+          <latest>now</latest>
+          <sampleRatio>1</sampleRatio>
+        </search>
+        <option name="drilldown">none</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </viz>
     </panel>
   </row>
 </form>
