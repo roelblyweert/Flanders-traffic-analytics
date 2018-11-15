@@ -1,7 +1,8 @@
 <form>
-  <label>Traffic sensor status monitoring</label>
+  <label>Traffic sensor status monitoring metrics</label>
   <search id="fetch_traffic_monitoring_data">
-    <query>| tstats latest(defect) AS defect, sum(klasse_1.verkeersintensiteit) AS number_small_vehicles, sum(klasse_2.verkeersintensiteit) AS number_cars, sum(klasse_3.verkeersintensiteit) AS number_vans, sum(klasse_4.verkeersintensiteit) AS number_lorries, sum(klasse_5.verkeersintensiteit) AS number_large_vehicles, latest(klasse_1.voertuigsnelheid_rekenkundig) AS average_speed_small_vehiles, latest(klasse_2.voertuigsnelheid_rekenkundig) AS average_speed_cars, latest(klasse_3.voertuigsnelheid_rekenkundig) AS average_speed_vans, latest(klasse_4.voertuigsnelheid_rekenkundig) AS average_speed_lorries, latest(klasse_5.voertuigsnelheid_rekenkundig) AS average_speed_large_cars, latest(onrustigheid) AS restlessness, latest(beschikbaarheidsgraad) AS sensor_availability where index=traffic_flanders defect=$defect_token$ by unieke_id 
+    <query>| mstats latest(defect) AS defect, sum(klasse_1.verkeersintensiteit) AS number_small_vehicles, sum(klasse_2.verkeersintensiteit) AS number_cars, sum(klasse_3.verkeersintensiteit) AS number_vans, sum(klasse_4.verkeersintensiteit) AS number_lorries, sum(klasse_5.verkeersintensiteit) AS number_large_vehicles, latest(klasse_1.voertuigsnelheid_rekenkundig) AS average_speed_small_vehiles, latest(klasse_2.voertuigsnelheid_rekenkundig) AS average_speed_cars, latest(klasse_3.voertuigsnelheid_rekenkundig) AS average_speed_vans, latest(klasse_4.voertuigsnelheid_rekenkundig) AS average_speed_lorries, latest(klasse_5.voertuigsnelheid_rekenkundig) AS average_speed_large_cars, latest(onrustigheid) AS restlessness, latest(beschikbaarheidsgraad) AS sensor_availability where index=traffic_flanders_metrics by unieke_id 
+| search defect=$defect_token$
 | lookup traffic_flander_config.csv unieke_id AS unieke_id OUTPUT volledige_naam 
 | search volledige_naam="*$sensor_location_token$*"
 | lookup sensor_defect_status.csv defect_nr AS defect OUTPUT defect_description</query>
@@ -35,7 +36,8 @@
       <title>Sensor location overview</title>
       <viz type="leaflet_maps_app.maps-plus">
         <search>
-          <query>| tstats latest(defect) AS defect, sum(klasse_1.verkeersintensiteit) AS number_small_vehicles, sum(klasse_2.verkeersintensiteit) AS number_cars, sum(klasse_3.verkeersintensiteit) AS number_vans, sum(klasse_4.verkeersintensiteit) AS number_lorries, sum(klasse_5.verkeersintensiteit) AS number_large_vehicles, latest(klasse_1.voertuigsnelheid_rekenkundig) AS average_speed_small_vehiles, latest(klasse_2.voertuigsnelheid_rekenkundig) AS average_speed_cars, latest(klasse_3.voertuigsnelheid_rekenkundig) AS average_speed_vans, latest(klasse_4.voertuigsnelheid_rekenkundig) AS average_speed_lorries, latest(klasse_5.voertuigsnelheid_rekenkundig) AS average_speed_large_cars, latest(onrustigheid) AS restlessness, latest(beschikbaarheidsgraad) AS sensor_availability where index=traffic_flanders defect=$defect_token$ by unieke_id 
+          <query>| mstats latest(defect) AS defect, sum(klasse_1.verkeersintensiteit) AS number_small_vehicles, sum(klasse_2.verkeersintensiteit) AS number_cars, sum(klasse_3.verkeersintensiteit) AS number_vans, sum(klasse_4.verkeersintensiteit) AS number_lorries, sum(klasse_5.verkeersintensiteit) AS number_large_vehicles, latest(klasse_1.voertuigsnelheid_rekenkundig) AS average_speed_small_vehiles, latest(klasse_2.voertuigsnelheid_rekenkundig) AS average_speed_cars, latest(klasse_3.voertuigsnelheid_rekenkundig) AS average_speed_vans, latest(klasse_4.voertuigsnelheid_rekenkundig) AS average_speed_lorries, latest(klasse_5.voertuigsnelheid_rekenkundig) AS average_speed_large_cars, latest(onrustigheid) AS restlessness, latest(beschikbaarheidsgraad) AS sensor_availability where index=traffic_flanders_metrics by unieke_id 
+| search defect=$defect_token$
 | lookup traffic_flander_config.csv unieke_id AS unieke_id OUTPUT volledige_naam 
 | search volledige_naam="*$sensor_location_token$*"
 | lookup sensor_defect_status.csv defect_nr AS defect OUTPUT defect_description

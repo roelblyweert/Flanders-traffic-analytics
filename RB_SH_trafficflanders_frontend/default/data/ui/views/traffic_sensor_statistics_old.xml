@@ -1,13 +1,16 @@
 <form>
-  <label>Traffic sensor statistics</label>
+  <label>Traffic sensor statistics - normal stats</label>
   <search id="fetch_traffic_monitoring_data">
-    <query>| tstats latest(defect) AS defect, sum(klasse_1.verkeersintensiteit) AS number_small_vehicles, sum(klasse_2.verkeersintensiteit) AS number_cars, sum(klasse_3.verkeersintensiteit) AS number_vans, sum(klasse_4.verkeersintensiteit) AS number_lorries, sum(klasse_5.verkeersintensiteit) AS number_large_vehicles, latest(klasse_1.voertuigsnelheid_rekenkundig) AS average_speed_small_vehiles, latest(klasse_2.voertuigsnelheid_rekenkundig) AS average_speed_cars, latest(klasse_3.voertuigsnelheid_rekenkundig) AS average_speed_vans, latest(klasse_4.voertuigsnelheid_rekenkundig) AS average_speed_lorries, latest(klasse_5.voertuigsnelheid_rekenkundig) AS average_speed_large_cars, latest(onrustigheid) AS restlessness, latest(beschikbaarheidsgraad) AS sensor_availability where index=traffic_flanders by unieke_id 
+    <query>index=traffic_flanders 
+| stats latest(defect) AS defect, sum(klasse_1.verkeersintensiteit) AS number_small_vehicles, sum(klasse_2.verkeersintensiteit) AS number_cars, sum(klasse_3.verkeersintensiteit) AS number_vans, sum(klasse_4.verkeersintensiteit) AS number_lorries, sum(klasse_5.verkeersintensiteit) AS number_large_vehicles, latest(klasse_1.voertuigsnelheid_rekenkundig) AS average_speed_small_vehiles, latest(klasse_2.voertuigsnelheid_rekenkundig) AS average_speed_cars, latest(klasse_3.voertuigsnelheid_rekenkundig) AS average_speed_vans, latest(klasse_4.voertuigsnelheid_rekenkundig) AS average_speed_lorries, latest(klasse_5.voertuigsnelheid_rekenkundig) AS average_speed_large_cars, latest(onrustigheid) AS restlessness, latest(beschikbaarheidsgraad) AS sensor_availability by unieke_id 
 | lookup traffic_flander_config.csv unieke_id AS unieke_id OUTPUT volledige_naam 
 | lookup sensor_defect_status.csv defect_nr AS defect OUTPUT defect_description</query>
     <sampleRatio>1</sampleRatio>
   </search>
   <search id="fetch_timechart_traffic_monitoring_data">
-    <query>| tstats max(defect) AS defect, sum(klasse_1.verkeersintensiteit) AS number_small_vehicles, sum(klasse_2.verkeersintensiteit) AS number_cars, sum(klasse_3.verkeersintensiteit) AS number_vans, sum(klasse_4.verkeersintensiteit) AS number_lorries, sum(klasse_5.verkeersintensiteit) AS number_large_vehicles, latest(klasse_1.voertuigsnelheid_rekenkundig) AS average_speed_small_vehicles, latest(klasse_2.voertuigsnelheid_rekenkundig) AS average_speed_cars, latest(klasse_3.voertuigsnelheid_rekenkundig) AS average_speed_vans, latest(klasse_4.voertuigsnelheid_rekenkundig) AS average_speed_lorries, latest(klasse_5.voertuigsnelheid_rekenkundig) AS average_speed_large_cars where index=traffic_flanders by unieke_id, _time span=15m 
+    <query>index=traffic_flanders 
+| bin _time span=15m
+| stats max(defect) AS defect, sum(klasse_1.verkeersintensiteit) AS number_small_vehicles, sum(klasse_2.verkeersintensiteit) AS number_cars, sum(klasse_3.verkeersintensiteit) AS number_vans, sum(klasse_4.verkeersintensiteit) AS number_lorries, sum(klasse_5.verkeersintensiteit) AS number_large_vehicles, latest(klasse_1.voertuigsnelheid_rekenkundig) AS average_speed_small_vehicles, latest(klasse_2.voertuigsnelheid_rekenkundig) AS average_speed_cars, latest(klasse_3.voertuigsnelheid_rekenkundig) AS average_speed_vans, latest(klasse_4.voertuigsnelheid_rekenkundig) AS average_speed_lorries, latest(klasse_5.voertuigsnelheid_rekenkundig) AS average_speed_large_cars by unieke_id, _time
 | eval total_nr_vehicles = number_small_vehicles + number_cars + number_vans + number_lorries + number_large_vehicles 
 | eval overall_avg_speed = average_speed_small_vehicles + average_speed_cars + average_speed_vans + average_speed_lorries + average_speed_large_cars </query>
     <sampleRatio>1</sampleRatio>
@@ -79,7 +82,9 @@
       <title>Average overall occupancy</title>
       <single>
         <search>
-          <query>| tstats avg(bezettingsgraad) AS occupancy where index="traffic_flanders" by _time span=15m</query>
+          <query>index="traffic_flanders" 
+          | bin _time span=15m
+          | stats avg(bezettingsgraad) AS occupancy by _time</query>
           <sampleRatio>1</sampleRatio>
         </search>
         <option name="colorBy">value</option>
@@ -194,7 +199,8 @@
       <title>Number of vehicles per vehicle class</title>
       <chart>
         <search>
-          <query>| tstats sum(klasse_1.verkeersintensiteit) AS 1, sum(klasse_2.verkeersintensiteit) AS 2, sum(klasse_3.verkeersintensiteit) AS 3, sum(klasse_4.verkeersintensiteit) AS 4, sum(klasse_5.verkeersintensiteit) AS 5 where index=traffic_flanders 
+          <query>index="traffic_flanders" 
+| stats sum(klasse_1.verkeersintensiteit) AS 1, sum(klasse_2.verkeersintensiteit) AS 2, sum(klasse_3.verkeersintensiteit) AS 3, sum(klasse_4.verkeersintensiteit) AS 4, sum(klasse_5.verkeersintensiteit) AS 5
 | transpose 
 | rename "row 1" as "Number of vehicles" 
 | lookup vehicle_classes.csv class_id AS column OUTPUT class_description 
@@ -241,7 +247,8 @@
       <title>Average speed per vehicle class</title>
       <chart>
         <search>
-          <query>| tstats avg(klasse_1.voertuigsnelheid_rekenkundig) AS 1, avg(klasse_2.voertuigsnelheid_rekenkundig) AS 2, avg(klasse_3.voertuigsnelheid_rekenkundig) AS 3, avg(klasse_4.voertuigsnelheid_rekenkundig) AS 4, avg(klasse_5.voertuigsnelheid_rekenkundig) AS 5 where index=traffic_flanders 
+          <query>index="traffic_flanders" 
+| stats avg(klasse_1.voertuigsnelheid_rekenkundig) AS 1, avg(klasse_2.voertuigsnelheid_rekenkundig) AS 2, avg(klasse_3.voertuigsnelheid_rekenkundig) AS 3, avg(klasse_4.voertuigsnelheid_rekenkundig) AS 4, avg(klasse_5.voertuigsnelheid_rekenkundig) AS 5
 | transpose 
 | rename "row 1" as "Average speed (km/h)" 
 | lookup vehicle_classes.csv class_id AS column OUTPUT class_name 
@@ -289,7 +296,9 @@
       <title>Data quality overview - count per hour and day - last 30 days</title>
       <viz type="punchcard_app.punchcard">
         <search>
-          <query>| tstats count where index=traffic_flanders by _time span=1h 
+          <query>index="traffic_flanders" 
+| bin _time span=1h
+| stats count by _time
 | eval date_hour=strftime(_time,"%H") 
 | eval day=strftime(_time,"%Y-%m-%d") 
 | fields - _time | table date_hour, day, count</query>

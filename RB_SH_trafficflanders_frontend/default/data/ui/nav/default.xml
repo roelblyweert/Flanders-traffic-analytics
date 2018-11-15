@@ -1,9 +1,13 @@
 <nav search_view="search" color="#00008B">
   <view name="traffic_sensor_statistics" default='true' />
-  <view name="flanders_traffic_sensor_monitoring" />
+  <view name="flanders_traffic_sensor_monitoring"/>
   <view name="flanders_traffic_vehicle_speed_overview" />
+  <collection label="Metric store">
+    <view name="traffic_sensor_statistics_metrics"/>
+    <view name="traffic_sensor_status_monitoring_metrics"/>
+  </collection>
   <collection label="Splunk views">
-    <view name="search" />
+    <view name="search" default='true' />
     <view name="datasets" />
     <view name="reports" />
     <view name="alerts" />

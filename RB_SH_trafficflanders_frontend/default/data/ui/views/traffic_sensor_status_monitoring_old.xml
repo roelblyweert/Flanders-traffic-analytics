@@ -1,0 +1,166 @@
+<form>
+  <label>Traffic sensor status monitoring - normal stats</label>
+  <search id="fetch_traffic_monitoring_data">
+    <query>index=traffic_flanders defect=$defect_token$
+| stats latest(defect) AS defect, sum(klasse_1.verkeersintensiteit) AS number_small_vehicles, sum(klasse_2.verkeersintensiteit) AS number_cars, sum(klasse_3.verkeersintensiteit) AS number_vans, sum(klasse_4.verkeersintensiteit) AS number_lorries, sum(klasse_5.verkeersintensiteit) AS number_large_vehicles, latest(klasse_1.voertuigsnelheid_rekenkundig) AS average_speed_small_vehiles, latest(klasse_2.voertuigsnelheid_rekenkundig) AS average_speed_cars, latest(klasse_3.voertuigsnelheid_rekenkundig) AS average_speed_vans, latest(klasse_4.voertuigsnelheid_rekenkundig) AS average_speed_lorries, latest(klasse_5.voertuigsnelheid_rekenkundig) AS average_speed_large_cars, latest(onrustigheid) AS restlessness, latest(beschikbaarheidsgraad) AS sensor_availability by unieke_id 
+| lookup traffic_flander_config.csv unieke_id AS unieke_id OUTPUT volledige_naam 
+| search volledige_naam="*$sensor_location_token$*"
+| lookup sensor_defect_status.csv defect_nr AS defect OUTPUT defect_description</query>
+    <sampleRatio>1</sampleRatio>
+  </search>
+  <fieldset submitButton="false" autoRun="true">
+    <input type="time">
+      <label></label>
+      <default>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+    <input type="dropdown" token="defect_token" searchWhenChanged="true">
+      <label>Select a defect status</label>
+      <choice value="*">All</choice>
+      <fieldForLabel>defect_description</fieldForLabel>
+      <fieldForValue>defect_nr</fieldForValue>
+      <search>
+        <query>| inputlookup sensor_defect_status.csv</query>
+      </search>
+      <default>*</default>
+    </input>
+    <input type="text" token="sensor_location_token" searchWhenChanged="true">
+      <label>Type a sensor location</label>
+      <default>*</default>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <title>Sensor location overview</title>
+      <viz type="leaflet_maps_app.leaflet_maps">
+        <search base="fetch_traffic_monitoring_data">
+          <query>| fields defect, unieke_id 
+| lookup traffic_flander_config.csv unieke_id AS unieke_id OUTPUT X_coord_EPSG_31370, Y_coord_EPSG_31370, breedtegraad_EPSG_4326, lengtegraad_EPSG_4326, volledige_naam, Kmp_Rsys, Rijstrook 
+| rename breedtegraad_EPSG_4326 AS latitude, lengtegraad_EPSG_4326 AS longitude
+| eval description = volledige_naam + " - " + unieke_id</query>
+        </search>
+        <option name="drilldown">all</option>
+        <option name="leaflet_maps_app.leaflet_maps.allPopups">1</option>
+        <option name="leaflet_maps_app.leaflet_maps.animate">1</option>
+        <option name="leaflet_maps_app.leaflet_maps.autoFitAndZoom">1</option>
+        <option name="leaflet_maps_app.leaflet_maps.autoFitAndZoomDelay">500</option>
+        <option name="leaflet_maps_app.leaflet_maps.cluster">1</option>
+        <option name="leaflet_maps_app.leaflet_maps.contextMenu">0</option>
+        <option name="leaflet_maps_app.leaflet_maps.criticalThreshold">80</option>
+        <option name="leaflet_maps_app.leaflet_maps.defaultHeight">600</option>
+        <option name="leaflet_maps_app.leaflet_maps.drilldown">1</option>
+        <option name="leaflet_maps_app.leaflet_maps.fullScreen">0</option>
+        <option name="leaflet_maps_app.leaflet_maps.googlePlacesPosition">topleft</option>
+        <option name="leaflet_maps_app.leaflet_maps.googlePlacesSearch">0</option>
+        <option name="leaflet_maps_app.leaflet_maps.googlePlacesZoomLevel">12</option>
+        <option name="leaflet_maps_app.leaflet_maps.layerControl">1</option>
+        <option name="leaflet_maps_app.leaflet_maps.layerControlCollapsed">1</option>
+        <option name="leaflet_maps_app.leaflet_maps.mapCenterLat">39.50</option>
+        <option name="leaflet_maps_app.leaflet_maps.mapCenterLon">-98.35</option>
+        <option name="leaflet_maps_app.leaflet_maps.mapCenterZoom">6</option>
+        <option name="leaflet_maps_app.leaflet_maps.mapTile">http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png</option>
+        <option name="leaflet_maps_app.leaflet_maps.maxClusterRadius">2</option>
+        <option name="leaflet_maps_app.leaflet_maps.maxSpiderfySize">1024</option>
+        <option name="leaflet_maps_app.leaflet_maps.maxZoom">19</option>
+        <option name="leaflet_maps_app.leaflet_maps.measureActiveColor">#00ff00</option>
+        <option name="leaflet_maps_app.leaflet_maps.measureCompletedColor">#0066ff</option>
+        <option name="leaflet_maps_app.leaflet_maps.measureIconPosition">topright</option>
+        <option name="leaflet_maps_app.leaflet_maps.measureLocalization">en</option>
+        <option name="leaflet_maps_app.leaflet_maps.measurePrimaryAreaUnit">acres</option>
+        <option name="leaflet_maps_app.leaflet_maps.measurePrimaryLengthUnit">feet</option>
+        <option name="leaflet_maps_app.leaflet_maps.measureSecondaryAreaUnit">sqmiles</option>
+        <option name="leaflet_maps_app.leaflet_maps.measureSecondaryLengthUnit">miles</option>
+        <option name="leaflet_maps_app.leaflet_maps.measureTool">0</option>
+        <option name="leaflet_maps_app.leaflet_maps.minZoom">1</option>
+        <option name="leaflet_maps_app.leaflet_maps.multiplePopups">0</option>
+        <option name="leaflet_maps_app.leaflet_maps.pathColorList">#0003F0,#D43C29,darkgreen,0xe2d400,darkred,#23A378</option>
+        <option name="leaflet_maps_app.leaflet_maps.permanentTooltip">1</option>
+        <option name="leaflet_maps_app.leaflet_maps.rangeOneBgColor">#B5E28C</option>
+        <option name="leaflet_maps_app.leaflet_maps.rangeOneFgColor">#6ECC39</option>
+        <option name="leaflet_maps_app.leaflet_maps.rangeThreeBgColor">#FD9C73</option>
+        <option name="leaflet_maps_app.leaflet_maps.rangeThreeFgColor">#F18017</option>
+        <option name="leaflet_maps_app.leaflet_maps.rangeTwoBgColor">#F1D357</option>
+        <option name="leaflet_maps_app.leaflet_maps.rangeTwoFgColor">#F0C20C</option>
+        <option name="leaflet_maps_app.leaflet_maps.scrollWheelZoom">0</option>
+        <option name="leaflet_maps_app.leaflet_maps.showPathLines">0</option>
+        <option name="leaflet_maps_app.leaflet_maps.singleMarkerMode">0</option>
+        <option name="leaflet_maps_app.leaflet_maps.spiderfyDistanceMultiplier">1</option>
+        <option name="leaflet_maps_app.leaflet_maps.stickyTooltip">1</option>
+        <option name="leaflet_maps_app.leaflet_maps.warningThreshold">55</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+        <drilldown>
+          <link target="_blank">flanders_traffic_vehicle_speed_overview?form.sensor_location_token=$row.volledige_naam$&amp;form.sensor_id_token=$row.unieke_id$</link>
+        </drilldown>
+      </viz>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>Sensor status table overview</title>
+      <table>
+        <search base="fetch_traffic_monitoring_data">
+          <query>table unieke_id, volledige_naam, defect_description
+          | sort volledige_naam
+          | eval "Sensor location" = volledige_naam
+          | eval "Sensor ID" = unieke_id
+          | rename defect_description AS "Sensor defect description"</query>
+        </search>
+        <option name="count">10</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">cell</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+        <fields>["Sensor location","Sensor ID","Sensor defect description"]</fields>
+        <drilldown>
+          <link target="_blank">flanders_traffic_vehicle_speed_overview?form.sensor_location_token=$row.volledige_naam$&amp;form.sensor_id_token=$row.unieke_id$</link>
+        </drilldown>
+      </table>
+    </panel>
+    <panel>
+      <title>Sensor status pie chart overview</title>
+      <chart>
+        <search base="fetch_traffic_monitoring_data">
+          <query>stats count by defect_description
+| rename defect_description AS "Sensor defect description"</query>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.abbreviation">none</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.abbreviation">none</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.abbreviation">none</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">pie</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.mode">standard</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="charting.lineWidth">2</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+    </panel>
+  </row>
+</form>
