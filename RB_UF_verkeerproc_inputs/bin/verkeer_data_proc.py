@@ -34,15 +34,34 @@ def processData(xmldata):
 
 					# go through all meet data
 					for meetdata in data:
-						dict_data["klasse_" + klasse_id][meetdata.tag] = meetdata.text
+						if is_number(meetdata.text):
+							dict_data["klasse_" + klasse_id][meetdata.tag] = int(meetdata.text)
+						else:
+							dict_data["klasse_" + klasse_id][meetdata.tag] = meetdata.text
 				elif data.tag == "rekendata":
 					# go through all reken data
 					for rekendata in data:
-						dict_data[rekendata.tag] = rekendata.text
+						if is_number(rekendata.text):
+							dict_data[rekendata.tag] = int(rekendata.text)
+						else:
+							dict_data[rekendata.tag] = rekendata.text
 				else:
-					dict_data[data.tag] = data.text
+					if is_number(data.text):
+						dict_data[data.tag] = int(data.text)
+					else:
+						dict_data[data.tag] = data.text
 
 			print json.dumps(dict_data)
+
+def is_number(s):
+	try:
+		int(s)
+		return True
+	except ValueError:
+		pass
+				 
+	return False
+
 	
 ##################
 # MAIN ###########
