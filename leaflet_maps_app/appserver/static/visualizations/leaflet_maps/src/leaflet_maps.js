@@ -8,6 +8,7 @@ define([
             'api/SplunkVisualizationBase',
             'api/SplunkVisualizationUtils',
             'load-google-maps-api',
+            'leaflet-bing-layer',
 			'leaflet-contextmenu',
 			'leaflet-dialog',
             'leaflet-google-places-autocomplete',
@@ -87,7 +88,8 @@ define([
             'display.visualizations.custom.leaflet_maps_app.leaflet_maps.measureLocalization': "en",
             'display.visualizations.custom.leaflet_maps_app.leaflet_maps.showPathLines': 0,
             'display.visualizations.custom.leaflet_maps_app.leaflet_maps.pathIdentifier': "",
-            'display.visualizations.custom.leaflet_maps_app.leaflet_maps.pathColorList': "#0003F0,#D43C29,darkgreen,0xe2d400,darkred,#23A378"
+            'display.visualizations.custom.leaflet_maps_app.leaflet_maps.pathColorList': "#0003F0,#D43C29,darkgreen,0xe2d400,darkred,#23A378",
+            'display.visualizations.custom.leaflet_maps_app.leaflet_maps.refreshInterval': 0
         },
         ATTRIBUTIONS: {
         'http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png': '&copy; OpenStreetMap contributors',
@@ -103,6 +105,33 @@ define([
             SplunkVisualizationBase.prototype.initialize.apply(this, arguments);
             this.$el = $(this.el);
             this.isInitializedDom = false;
+            this.splunkVersion = "unknown";
+            this.isSplunkSeven = false;
+            this.curPage = 0;
+            this.allDataProcessed = false;
+
+            // Detect version from REST API
+            $.ajax({
+                type: "GET",
+                async: false,
+                context: this,
+                url: "/en-US/splunkd/__raw/servicesNS/nobody/leaflet_maps_app/server/info",
+                success: function(s) {                                        
+                    var xml = $(s);
+                    var that = this;
+                    $(xml).find('content').children().children().each(function(i, v) {
+                        if(/name="version"/.test(v.outerHTML)) {
+                            that.splunkVersion = parseFloat(v.textContent);
+                            if(that.splunkVersion >= 7.0) {
+                                that.isSplunkSeven = true;
+                            }
+                        } 
+                    });
+                },
+                error: function(e) {
+                    console.info(e);
+                }
+            });
         },
   
         // Search data params
@@ -111,10 +140,6 @@ define([
                 outputMode: SplunkVisualizationBase.RAW_OUTPUT_MODE,
                 count: this.maxResults
             });
-        },
-
-        setupView: function() {
-            this.clearMap = false;
         },
 
         // Build object of key/value pairs for invalid fields
@@ -155,6 +180,12 @@ define([
         _getEscapedProperty: function(name, config) {
             var propertyValue = config[this.getPropertyNamespaceInfo().propertyNamespace + name];
             return SplunkVisualizationUtils.escapeHtml(propertyValue);
+        },
+
+        _getSafeUrlProperty: function(name, config) {
+            var propertyValue = config[this.getPropertyNamespaceInfo().propertyNamespace + name];
+            return SplunkVisualizationUtils.makeSafeUrl(propertyValue);
+
         },
 
 		// Custom drilldown behavior for markers
@@ -331,8 +362,11 @@ define([
         },
 
         formatData: function(data) {
-            if(data.results.length < 1) {
-                    return false;
+            if(data.results.length == 0 && data.fields.length >= 1){
+                this.allDataProcessed = true;
+                return this;
+            } else if(data.results.length == 0)  {
+                return this;
             }
 
             return data;
@@ -345,37 +379,6 @@ define([
 			if(_.keys(config).length <= 1) {
                 config = this.defaultConfig;
             }
-            // Clear map and reset everything
-            if(this.clearMap === true) {
-                this.offset = 0; // reset offset
-                this.updateDataParams({count: this.chunk, offset: this.offset}); // update data params
-                this.invalidateUpdateView();  // redraw map
-                var markers = this.markers;
-                this.markers.clearLayers();
-                var clearMap = this.clearMap;
-                this.clearMap = false;
-                // remove layers from map and clear out marker data
-                _.each(this.layerFilter, function(lg, i) {
-                    lg.group.clearLayers();
-                    lg.markerList = [];
-                }, this);
-                this.pathLineLayer.clearLayers();
-            }
-
-            // get data
-            var dataRows = data.results;
-
-            // check for data
-            if (!dataRows || dataRows.length === 0 || dataRows[0].length === 0) {
-                return this;
-            }
-
-            // Validate we have at least latitude and longitude fields
-            if(!("latitude" in dataRows[0]) || !("longitude" in dataRows[0])) {
-                 throw new SplunkVisualizationBase.VisualizationError(
-                    'Incorrect Fields Detected - latitude & longitude fields required'
-                );
-            }
 
             // get configs
             var cluster     = parseInt(this._getEscapedProperty('cluster', config)),
@@ -387,7 +390,7 @@ define([
                 maxSpiderfySize = parseInt(this._getEscapedProperty('maxSpiderfySize', config)),
                 spiderfyDistanceMultiplier = parseInt(this._getEscapedProperty('spiderfyDistanceMultiplier', config)),
                 mapTile     = SplunkVisualizationUtils.makeSafeUrl(this._getEscapedProperty('mapTile', config)),
-                mapTileOverride  = SplunkVisualizationUtils.makeSafeUrl(this._getEscapedProperty('mapTileOverride', config)),
+				mapTileOverride  = this._getSafeUrlProperty('mapTileOverride', config),
                 mapAttributionOverride = this._getEscapedProperty('mapAttributionOverride', config),
                 layerControl = parseInt(this._getEscapedProperty('layerControl', config)),
                 layerControlCollapsed = parseInt(this._getEscapedProperty('layerControlCollapsed', config)),
@@ -408,7 +411,11 @@ define([
                 googlePlacesSearch = parseInt(this._getEscapedProperty('googlePlacesSearch', config)),
                 googlePlacesApiKey = this._getEscapedProperty('googlePlacesApiKey', config),
                 googlePlacesZoomLevel = parseInt(this._getEscapedProperty('googlePlacesZoomLevel', config)),
-				googlePlacesPosition = this._getEscapedProperty('googlePlacesPosition', config),
+                googlePlacesPosition = this._getEscapedProperty('googlePlacesPosition', config),
+                bingMaps = parseInt(this._getEscapedProperty('bingMaps', config)),
+                bingMapsApiKey = this._getEscapedProperty('bingMapsApiKey', config),
+                bingMapsTileLayer = this._getEscapedProperty('bingMapsTileLayer', config),
+                bingMapsLabelLanguage = this._getEscapedProperty('bingMapsLabelLanguage', config),
                 kmlOverlay  = this._getEscapedProperty('kmlOverlay', config),
                 rangeOneBgColor = this._getEscapedProperty('rangeOneBgColor', config),
                 rangeOneFgColor = this._getEscapedProperty('rangeOneFgColor', config),
@@ -429,7 +436,71 @@ define([
                 measureLocalization = this._getEscapedProperty('measureLocalization', config),
                 showPathLines = parseInt(this._getEscapedProperty('showPathLines', config)),
                 pathIdentifier = this._getEscapedProperty('pathIdentifier', config),
-                pathColorList = this._getEscapedProperty('pathColorList', config);
+                pathColorList = this._getEscapedProperty('pathColorList', config),
+                refreshInterval = parseInt(this._getEscapedProperty('refreshInterval', config)) * 1000;
+
+            // Auto Fit & Zoom once we've processed all data
+            if(this.allDataProcessed) {
+                if(this.isArgTrue(autoFitAndZoom)) {
+                    setTimeout(this.fitLayerBounds, autoFitAndZoomDelay, this.layerFilter, this);
+                }
+
+                // Dashboard refresh
+                if(refreshInterval > 0) {
+                    setTimeout(function() {
+                        location.reload();
+                    }, refreshInterval);
+                }
+            } 
+            
+            if (this.allDataProcessed && !this.isSplunkSeven) {
+                // Remove marker cluster layers
+                try {
+                    this.markers.clearLayers();
+                    //this.markers = null;
+                } catch(e) {
+                    console.error(e);
+                }
+                
+                // Remove layer Filter layers
+                _.each(this.layerFilter, function(lg, i) {
+                    lg.group.removeLayer();
+                }, this);
+                this.layerFilter = {};
+
+                // Remove path line layer
+                try {
+                    this.pathLineLayer.clearLayers();
+                } catch(e) {
+                    console.error(e);
+                }
+                this.curPage = 0;
+                this.offset = 0;
+                this.control._layers = [];
+                this.allDataProcessed = false;
+                this.updateDataParams({offset: 0, count: this.chunk});
+                return this;
+            }
+
+            // Check for data and retrun if we don't have any
+            if(!_.has(data, "results")) {
+                return this;
+            }
+
+            // get data
+            var dataRows = data.results;
+
+            // check for data
+            if (!dataRows || dataRows.length === 0 || dataRows[0].length === 0) {
+                return this;
+            }
+
+            // Validate we have at least latitude and longitude fields
+            if(!("latitude" in dataRows[0]) || !("longitude" in dataRows[0])) {
+                 throw new SplunkVisualizationBase.VisualizationError(
+                    'Incorrect Fields Detected - latitude & longitude fields required'
+                );
+            }
 
             this.activeTile = (mapTileOverride) ? mapTileOverride:mapTile;
             this.attribution = (mapAttributionOverride) ? mapAttributionOverride:this.ATTRIBUTIONS[mapTile];
@@ -521,19 +592,28 @@ define([
                     }) 
                 }
 
-                // Setup the tile layer with map tile, zoom and attribution
-				this.tileLayer = L.tileLayer(this.activeTile, {
-                    attribution: this.attribution,
-                    minZoom: minZoom,
-                    maxZoom: maxZoom
-				});
+                // Create Bing Map
+                if(this.isArgTrue(bingMaps)) {
+                    var bingOptions = this.bingOptions = {"bingMapsKey": bingMapsApiKey,
+                                                          "imagerySet": bingMapsTileLayer,
+                                                          "culture": bingMapsLabelLanguage};
+                    this.tileLayer = L.tileLayer.bing(this.bingOptions);
+                } else {
+                    // Setup the tile layer with map tile, zoom and attribution
+                    this.tileLayer = L.tileLayer(this.activeTile, {
+                        attribution: this.attribution,
+                        minZoom: minZoom,
+                        maxZoom: maxZoom
+                    });    
+                }
 
                 // Add tile layer to map
-                this.map.addLayer(this.tileLayer);   
+                this.map.addLayer(this.tileLayer);
 
                 this.markers = new L.MarkerClusterGroup({ 
                     chunkedLoading: true,
                     maxClusterRadius: maxClusterRadius,
+                    removeOutsideVisibleBounds: true,
                     maxSpiderfySize: maxSpiderfySize,
                     spiderfyDistanceMultiplier: spiderfyDistanceMultiplier,
                     singleMarkerMode: (this.isArgTrue(singleMarkerMode)),
@@ -557,10 +637,18 @@ define([
 				
 				// Get map size          
 				var mapSize = this.mapSize = this.map.getSize();
- 
-                // Get parent element of div to resize
-				var parentEl = $(this.el).parent().parent().parent().parent().parent().parent().parent().parent().closest("div").attr("data-cid");
 
+                // Get parent element of div to resize 
+                // Nesting of Div's is different, try 7.x first
+                var parentEl = $(this.el).parent().parent().parent().parent().parent().closest("div").attr("data-cid");
+                var parentView = $(this.el).parent().parent().parent().parent().parent().closest("div").attr("data-view");
+
+                // Default to 6.x view
+                if(parentView != 'views/shared/ReportVisualizer') {
+                    var parentEl = $(this.el).parent().parent().closest("div").attr("data-cid");
+                    var parentView = $(this.el).parent().parent().closest("div").attr("data-view");
+                }
+ 
                 // Map Full Screen Mode
                 if (this.isArgTrue(fullScreen)) {
                     var vh = $(window).height() - 120;
@@ -606,20 +694,25 @@ define([
                 var pathLineLayer = this.pathLineLayer = L.layerGroup().addTo(this.map);
                
                 // Init defaults
-                this.chunk = 50000;
+                if(this.isSplunkSeven) {
+                    this.chunk = 50000;
+                } else {
+                    this.chunk = 10000;
+                }
                 this.offset = 0;
 				this.isInitializedDom = true;         
-                this.clearMap = false;
+                this.allDataProcessed = false;
             } 
-
 
             // Map Scroll
             (this.isArgTrue(scrollWheelZoom)) ? this.map.scrollWheelZoom.enable() : this.map.scrollWheelZoom.disable();
 
-            // Reset Tile If Changed
-            if(this.tileLayer._url != this.activeTile) {
-                this.tileLayer.setUrl(this.activeTile);
-            }
+            if(!this.isArgTrue(bingMaps)) {
+                // Reset Tile If Changed
+                if(this.tileLayer._url != this.activeTile) {
+                    this.tileLayer.setUrl(this.activeTile);
+                }
+            }   
 
             // Reset tile zoom levels if changed
             if (this.tileLayer.options.maxZoom != maxZoom) {
@@ -639,20 +732,33 @@ define([
  
             // Iterate through each row creating layer groups per icon type
             // and create markers appending to a markerList in each layerfilter object
+
+            // Init current position in dataRows
+            var curPos = this.curPos = 0;
+
             _.each(dataRows, function(userData, i) {
+                // Only return if we have > this.chunkSize and not on the first page of results
+                // Part of pagination logic to determine when we've fetched all results.
+                if(!this.isSplunkSeven) {
+                    if(this.curPage >= 1 && this.curPos == 0) {
+                        this.curPos += 1;
+                        return;
+                    }
+                }
+
                 // Set icon options
                 var icon = _.has(userData, "icon") ? userData["icon"]:"circle";
 				var layerGroup = _.has(userData, "layerGroup") ? userData["layerGroup"]:icon;
 
                 // Create Clustered featuregroup subgroup layer
-                if (typeof this.layerFilter[layerGroup] == 'undefined' && this.isArgTrue(cluster)) {
+                if (_.isUndefined(this.layerFilter[layerGroup]) && this.isArgTrue(cluster)) {
                     this.layerFilter[layerGroup] = {'group' : L.featureGroup.subGroup(this.markers),
                                               'markerList' : [],
                                               'iconStyle' : icon,
                                               'layerExists' : false
                                              };
                 // Create normal layergroup
-                } else if (typeof this.layerFilter[layerGroup] == 'undefined') {
+                } else if (_.isUndefined(this.layerFilter[layerGroup])) {
                     this.layerFilter[layerGroup] = {'group' : L.featureGroup(),
                                               'markerList' : [],
                                               'iconStyle' : icon,
@@ -662,7 +768,7 @@ define([
 
                 var layerDescription  = _.has(userData, "layerDescription") ? userData["layerDescription"]:"";
 
-                if (typeof this.layerFilter[layerGroup] !== 'undefined') {
+                if (!_.isUndefined(this.layerFilter[layerGroup])) {
                     this.layerFilter[layerGroup].layerDescription = layerDescription;
                 }
 				
@@ -726,7 +832,7 @@ define([
                 /* Add the icon to layerFilter so we can access properties
 				 * for overlay in addLayerToControl
 				 */
-                if (typeof this.layerFilter[layerGroup] !== 'undefined') {
+                if (!_.isUndefined(this.layerFilter[layerGroup])) {
                     this.layerFilter[layerGroup].icon = markerIcon;
                 }
 
@@ -766,6 +872,8 @@ define([
                 } else {
                     this.layerFilter[layerGroup].markerList.push(marker);
                 }
+
+                this.curPos += 1;
             }, this);            
 
             // Enable/disable layer controls and toggle collapse 
@@ -849,29 +957,6 @@ define([
 				}, this);
 			}
 
-			/*
-			// New logic for v1.5.6 - use data.meta.done flag to determine end of search
-            this.offset += dataRows.length;
-            try {
-                if(data.meta.done !== true) {
-                    this.updateDataParams({count: this.chunk, offset: this.offset});
-                } else {
-					// Make final call to flush
-                    this.updateDataParams({});
-
-                    if(this.isArgTrue(autoFitAndZoom)) {
-						// Delay firing due to issues with fitBounds not always working
-						// 500 ms seems to help
-                        setTimeout(this.fitLayerBounds, autoFitAndZoomDelay, this.layerFilter, this);
-                    }
-
-                    this.clearMap = true;
-                }
-            } catch(err) {
-                console.log(err);
-            }
-			*/
-
  			/*
              * Fix for hidden divs using tokens in Splunk
              * https://github.com/Leaflet/Leaflet/issues/2738
@@ -886,20 +971,26 @@ define([
                 }, 500, this);
             }
 
-			// 1.5.6.1 - Reverting to old code due to reports of inconsistent 
-			// behavior featching results.
-            // Chunk through data 50k results at a time
-            if(dataRows.length === this.chunk) {
-                this.offset += this.chunk;
-                this.updateDataParams({count: this.chunk, offset: this.offset});
+            // Update offset and fetch next chunk of data
+            if(this.isSplunkSeven) {
+                this.offset += dataRows.length;
+                this.updateDataParams({count: this.chunk, offset: this.offset});    
             } else {
-                if(this.isArgTrue(autoFitAndZoom)) {
-                    setTimeout(this.fitLayerBounds, autoFitAndZoomDelay, this.layerFilter, this);
+                // It's Splunk 6.x
+                if(dataRows.length == this.chunk) {
+                    // This results in a dupe. The last element in the current result set
+                    // and the first element in the next result set. This dupe is handled in the 
+                    // loop processing the results.
+                    this.offset += this.chunk-1;
+                    this.curPage += 1;
+                    this.updateDataParams({count: this.chunk, offset: this.offset});
+                } else {
+                    this.allDataProcessed = true;
+                    if(this.isArgTrue(autoFitAndZoom)) {
+                        setTimeout(this.fitLayerBounds, autoFitAndZoomDelay, this.layerFilter, this);
+                    }
                 }
-                this.clearMap = true;
             }
-
-
 
             return this;
         }
